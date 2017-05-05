@@ -1,0 +1,50 @@
+#!/usr/bin/env python
+ ############################################################################
+ #                                                                          #
+ #                            OPT-PARSER                                    #
+ #                                                                          #
+ #           Copyright (C) 2008 - 2010 Ada Core Technologies, Inc.          #
+ #                                                                          #
+ # This program is free software: you can redistribute it and/or modify     #
+ # it under the terms of the GNU General Public License as published by     #
+ # the Free Software Foundation, either version 3 of the License, or        #
+ # (at your option) any later version.                                      #
+ #                                                                          #
+ # This program is distributed in the hope that it will be useful,          #
+ # but WITHOUT ANY WARRANTY; without even the implied warranty of           #
+ # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            #
+ # GNU General Public License for more details.                             #
+ #                                                                          #
+ # You should have received a copy of the GNU General Public License        #
+ # along with this program.  If not, see <http://www.gnu.org/licenses/>     #
+ #                                                                          #
+ ############################################################################
+
+import logging
+import sys
+from gnatpython.optfileparser import *
+
+if __name__ == "__main__":
+    if len(sys.argv) < 3:
+        print "Usage: parser <tag_tree> <opt_file>"
+        sys.exit(1)
+
+    for arg in sys.argv[3:]:
+        if arg == "-d":
+            logging.basicConfig(level=logging.DEBUG,
+                format='%(asctime)s %(levelname)-8s %(message)s',
+                datefmt='%a, %d %b %Y %H:%M:%S')
+
+    filename = sys.argv[2]
+    tags = sys.argv[1]
+
+    logging.debug('opt_parse (' + tags + ', ' + filename + ')')
+
+    try:
+        parser = OptFileParse(tags, filename)
+        result = '%s' % parser
+        if result != '':
+            print result
+    except BadFormattingError, error:
+        print filename + " error"
+        sys.exit(error)

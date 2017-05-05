@@ -1,0 +1,107 @@
+#!/usr/bin/env python
+ ############################################################################
+ #                                                                          #
+ #                              MAINLOOP                                    #
+ #                                                                          #
+ #           Copyright (C) 2008 - 2010 Ada Core Technologies, Inc.          #
+ #                                                                          #
+ # This program is free software: you can redistribute it and/or modify     #
+ # it under the terms of the GNU General Public License as published by     #
+ # the Free Software Foundation, either version 3 of the License, or        #
+ # (at your option) any later version.                                      #
+ #                                                                          #
+ # This program is distributed in the hope that it will be useful,          #
+ # but WITHOUT ANY WARRANTY; without even the implied warranty of           #
+ # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            #
+ # GNU General Public License for more details.                             #
+ #                                                                          #
+ # You should have received a copy of the GNU General Public License        #
+ # along with this program.  If not, see <http://www.gnu.org/licenses/>     #
+ #                                                                          #
+ ############################################################################
+
+"""Usage: mainloop [options] test_list_file command_pattern
+
+Command line interface for testsuite mainloop
+
+WARNING: this script is deprecated. You should create a main python
+file and import MainLoop directly.
+"""
+
+from gnatpython.main import Main
+from gnatpython.mainloop import (
+    MainLoop, add_mainloop_options, generate_collect_result)
+from gnatpython.ex import Run
+from gnatpython.fileutils import split_file
+
+import os
+import sys
+
+
+def main():
+    m = Main(add_targets_options=True)
+    add_mainloop_options(m)
+    m.add_option("-o", "--output-dir",
+                 dest="output_dir",
+                 metavar="DIR",
+                 default="./",
+                 help="select output dir")
+    m.add_option('--format',
+                 dest="diffs_format",
+                 metavar="FORMAT",
+                 default=os.environ.get("MAINLOOP_FORMAT", "expected+actual"),
+                 help="Select diffs format. Supported values are:"
+                 " expected+actual (legacy format) or"
+                 " diff (using the TEST.diff output)."
+                 " Note that you can set MAINLOOP_FORMAT environment variable"
+                 " to change the default (expected+value).")
+    m.parse_args()
+
+    if len(m.args) != 2:
+        print "Error: 2 arguments expected"
+        sys.exit(m.usage)
+
+    test_list_file = m.args[0]
+    command_pattern = m.args[1]
+
+    # Retrieve list of old crashes and diffs/failed
+    # ??? this can be computed by generate_collect_result if old_output_dir is
+    # set
+    old_crashes_file = os.path.join(m.options.output_dir, '/old_crashes')
+    old_diffs_file = os.path.join(m.options.output_dir, 'old_diffs')
+
+    # Initialize some metrics
+    # First read the list of tests to be run
+    test_list = split_file(test_list_file, ' ')
+    # Retrieve list of old crashes and diffs/failed
+    metrics = {
+        'total': sum([len(e) for e in test_list]),
+        'old_diffs': [
+            k.split(':')[0] for k in
+            split_file(old_diffs_file, ignore_errors=True)],
+        'old_crashes': [
+            k.split(':')[0] for k in
+            split_file(old_crashes_file, ignore_errors=True)]}
+
+    def run_test(name, job_info):
+        """Run a test
+
+        See mainloop documentation
+        """
+        # VxWorks tests needs WORKER_ID to be set in order to have an id for
+        # vxsim that will not collide with other instances.
+        os.environ['WORKER_ID'] = str(job_info[0])
+
+        cmd = command_pattern % {'name': name}
+        cmd = cmd.split(";")
+        return Run(cmd, bg=True, output=None, error=None)
+
+    collect_result = generate_collect_result(
+        results_file=os.path.join(m.options.output_dir, 'results'),
+        metrics=metrics, options=m.options)
+
+    # Launch the mainloop
+    MainLoop(test_list, run_test, collect_result)
+
+if __name__ == '__main__':
+    main()
