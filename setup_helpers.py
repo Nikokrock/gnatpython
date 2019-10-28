@@ -1,7 +1,7 @@
 
-from distutils.command.build_ext import build_ext
+from setuptools.command.build_ext import build_ext
 from distutils.command.build_scripts import build_scripts
-from distutils.extension import Extension
+from setuptools import Extension
 from distutils.sysconfig import get_python_inc, get_python_lib
 
 import glob
