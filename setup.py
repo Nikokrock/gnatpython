@@ -20,4 +20,5 @@ setup(name='gnatpython',
       cmdclass={'build_ext': build_ext_gnatpython(),
                 'build_scripts': build_scripts_gnatpython()},
       install_requires = ['colorama', 'pyyaml', 'python-dateutil'],
+      extras_require = {":sys_platform=='win32'": ['pypiwin32']},
       scripts=[f for f in glob.glob('scripts/*') if os.path.isfile(f)])
